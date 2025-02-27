@@ -1,23 +1,32 @@
 # Live Map App
 
 ## Overview
-This application is a PyQT desktop application that displays a live map using Sentinel-2 imagery and allows users to load multiple CSV files with coordinate data as overlays. Users can manually select the CSV columns corresponding to:
-- **X**: Longitude
-- **Y**: Latitude
-- **Z**: Altitude (optional for 3D mapping)
-- **M**: Precision in meters (optional)
-
-Additionally, users can choose a custom icon for each CSV layer (e.g., Pin, Mountain, Star) and manage the layer order. The application also provides functionality to capture the current map view as an image.
+This application is a PyQT desktop application that displays a live map with multiple mapping options and CSV layer overlays. Users can:
+- Load multiple CSV files with coordinate data.
+- Select mapping options including:
+  - **OpenStreetMap**: Displays an OpenStreetMap view with CSV layer markers.
+  - **Google Map**: Displays a map using a custom Google Satellite tile layer.
+  - **Sentinel-2 Live Map**: Allows the user to select a date and time to view Sentinel-2 imagery using the Sentinel Hub API with OAuth2 authentication.
+- Manage CSV layers by selecting custom icons and reordering them.
+- Capture the current map view as an image.
+- **Automatic Field Selection**: The app now attempts to auto-select CSV columns for Longitude, Latitude, and Altitude based on header keywords.
 
 ## Features
-- **Live Map Display:** Renders a live map using folium and PyQtWebEngine.
-- **Multiple CSV Layers:** Add and display multiple CSV layers simultaneously, each with a distinct icon.
-- **Custom Icon Selection:** Choose from available icons (Pin, Mountain, Star) for each CSV layer.
-- **Layer Management:** Reorder layers to control their display priority.
-- **Map Capture:** Capture and save the current map view at the current zoom level.
+- **Live Map Display**: Renders maps using folium and PyQtWebEngine.
+- **Multiple Mapping Modes**: Toggle between OpenStreetMap, Google Map, and Sentinel-2 Live Map.
+- **CSV Layer Integration**: Load and display multiple CSV layers with custom icons.
+- **Layer Management**: Reorder CSV layers to determine display priority.
+- **Map Capture**: Save a snapshot of the current map view.
+- **Sentinel Hub Integration**: Uses OAuth2 to authenticate requests for Sentinel-2 imagery.
+- **Automatic CSV Field Detection**: Automatically selects appropriate columns for Longitude, Latitude, and Altitude based on header keywords.
 
-## Installation
-1. **Python Version:** Ensure Python 3.7 or higher is installed.
-2. **Dependencies:** Install required libraries using the provided `requirements.txt` file:
-   ```bash
-   pip install -r requirements.txt
+## Configuration for Sentinel-2
+To use the Sentinel-2 mapping mode:
+1. Register an OAuth client in your Sentinel Hub account.
+2. Replace the placeholder `<your_client_id>`, `<your_client_secret>`, and `<your_instance_id>` in `map_widget.py` with your actual credentials and instance identifier.
+3. Ensure your OAuth client has permissions to access the Sentinel Hub WMS service.
+
+## Running the Application
+Start the application with:
+```bash
+python main.py
