@@ -32,14 +32,14 @@ pip install -r requirements.txt
 
 
 File Structure
-css
-Copier
-Modifier
+
 live_map_app/
 ├── main.py
 ├── map_widget.py
 ├── csv_loader.py
 ├── vector_loader.py
 ├── icon_selector.py
+├── vector_layer_selector.py
+├── layer_preview.py
 ├── requirements.txt
 └── README.md
