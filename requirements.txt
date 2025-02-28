@@ -3,3 +3,4 @@ PyQtWebEngine
 folium
 pandas
 requests-oauthlib
+geopandas

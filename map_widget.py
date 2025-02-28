@@ -27,7 +27,6 @@ class MapWidget(QWidget):
 
         # Create a web view to display the generated map
         self.web_view = QWebEngineView()
-        # Set a custom user agent for better compatibility
         self.web_view.page().profile().setHttpUserAgent(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
             "(KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
@@ -35,14 +34,15 @@ class MapWidget(QWidget):
         self.layout.addWidget(self.web_view)
 
         self.map_file = "map.html"  # File to store the generated HTML map
-        self.layers = []  # List to store multiple CSV layers
+        self.csv_layers = []  # List to store CSV layers
+        self.vector_layers = []  # List to store vector layers
 
         self.map_mode = "OSM"  # Default mapping mode is OpenStreetMap
         self.map_mode_data = None  # Additional data (e.g., date/time for Sentinel)
 
         self.update_map_view()  # Load the initial map view
 
-    # Generate an OpenStreetMap with folium and add CSV layers
+    # Generate an OpenStreetMap using folium and add CSV and vector layers
     def generate_osm_map(self):
         folium_map = folium.Map(location=[0, 0], zoom_start=2)
         icon_mapping = {
@@ -50,14 +50,14 @@ class MapWidget(QWidget):
             "Mountain": "tree-conifer",
             "Star": "star"
         }
-        for layer in self.layers:
+        # Add CSV layers
+        for layer in self.csv_layers:
             icon_type = layer.get("icon", "Pin")
             for coordinate in layer["coordinates"]:
                 lat, lon, alt, precision = coordinate
                 popup_text = f"Altitude: {alt} m"
                 if precision is not None:
                     popup_text += f", Precision: {precision} m"
-                # Use custom icon if a valid file path is provided
                 if os.path.exists(icon_type):
                     marker_icon = folium.features.CustomIcon(icon_type, icon_size=(32, 32))
                 else:
@@ -67,6 +67,9 @@ class MapWidget(QWidget):
                     popup=popup_text,
                     icon=marker_icon
                 ).add_to(folium_map)
+        # Add vector layers
+        for layer in self.vector_layers:
+            folium.GeoJson(layer["geojson"], name=layer["name"]).add_to(folium_map)
         return folium_map
 
     # Generate a Google Map using a custom TileLayer with crossOrigin attribute
@@ -85,7 +88,7 @@ class MapWidget(QWidget):
             "Mountain": "tree-conifer",
             "Star": "star"
         }
-        for layer in self.layers:
+        for layer in self.csv_layers:
             icon_type = layer.get("icon", "Pin")
             for coordinate in layer["coordinates"]:
                 lat, lon, alt, precision = coordinate
@@ -101,6 +104,8 @@ class MapWidget(QWidget):
                     popup=popup_text,
                     icon=marker_icon
                 ).add_to(folium_map)
+        for layer in self.vector_layers:
+            folium.GeoJson(layer["geojson"], name=layer["name"]).add_to(folium_map)
         return folium_map
 
     # Generate a Sentinel-2 map using a WMS tile layer with proper parameters
@@ -127,7 +132,7 @@ class MapWidget(QWidget):
             "Mountain": "tree-conifer",
             "Star": "star"
         }
-        for layer in self.layers:
+        for layer in self.csv_layers:
             icon_type = layer.get("icon", "Pin")
             for coordinate in layer["coordinates"]:
                 lat, lon, alt, precision = coordinate
@@ -143,9 +148,11 @@ class MapWidget(QWidget):
                     popup=popup_text,
                     icon=marker_icon
                 ).add_to(folium_map)
+        for layer in self.vector_layers:
+            folium.GeoJson(layer["geojson"], name=layer["name"]).add_to(folium_map)
         return folium_map
 
-    # Update the map view based on selected mapping mode
+    # Update the map view based on the selected mapping mode
     def update_map_view(self):
         if self.map_mode == "OSM":
             folium_map = self.generate_osm_map()
@@ -154,10 +161,11 @@ class MapWidget(QWidget):
         elif self.map_mode == "Sentinel":
             date_time = self.map_mode_data if self.map_mode_data else "2023-01-01T00:00"
             folium_map = self.generate_sentinel_map(date_time)
+        folium.LayerControl().add_to(folium_map)
         folium_map.save(self.map_file)
         self.web_view.setUrl(QUrl.fromLocalFile(os.path.abspath(self.map_file)))
 
-    # Set mapping mode and update view
+    # Set the mapping mode and update the view
     def set_map_mode(self, mode, data=None):
         self.map_mode = mode
         self.map_mode_data = data
@@ -165,17 +173,34 @@ class MapWidget(QWidget):
 
     # Add a new CSV layer with its coordinates and chosen icon
     def add_layer(self, coordinates, icon):
-        layer_name = f"Layer {len(self.layers) + 1}"
+        layer_name = f"CSV Layer {len(self.csv_layers) + 1}"
         new_layer = {"name": layer_name, "coordinates": coordinates, "icon": icon}
-        self.layers.append(new_layer)
+        self.csv_layers.append(new_layer)
         self.update_map_view()
 
-    # Update layer order and refresh the map
+    # Add a new vector layer using GeoJSON data and layer name
+    def add_vector_layer(self, geojson, layer_name):
+        new_layer = {"name": layer_name, "geojson": geojson}
+        self.vector_layers.append(new_layer)
+        self.update_map_view()
+
+    # Combine all layers (CSV and vector) for management
+    def all_layers(self):
+        combined = []
+        for layer in self.csv_layers:
+            combined.append(layer)
+        for layer in self.vector_layers:
+            combined.append(layer)
+        return combined
+
+    # Update layer order based on a new order list (combined CSV and vector layers)
     def update_layer_order(self, new_layers):
-        self.layers = new_layers
+        # For simplicity, assign CSV layers first if they are in new order, then vector layers.
+        self.csv_layers = [layer for layer in new_layers if "coordinates" in layer]
+        self.vector_layers = [layer for layer in new_layers if "geojson" in layer]
         self.update_map_view()
 
-    # Capture current map view as an image
+    # Capture the current map view as an image and allow the user to save it
     def capture_map(self):
         pixmap = self.web_view.grab()
         file_path, _ = QFileDialog.getSaveFileName(self, "Save Map Capture", "", "PNG Files (*.png)")

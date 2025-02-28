@@ -1,15 +1,16 @@
 # main.py
-import sys  # For system-related functionality
+import sys  # Import system module for command line arguments
 import os  # For path operations
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton,
     QFileDialog, QToolBar, QAction, QDialog, QFormLayout, QComboBox,
     QDateTimeEdit, QDialogButtonBox, QListWidget, QHBoxLayout, QLabel
 )  # Import necessary PyQt5 widgets
-import pandas as pd  # For CSV header reading
-from csv_loader import load_csv_coordinates  # For loading CSV coordinates
-from map_widget import MapWidget  # For displaying the map
-from icon_selector import IconSelectorDialog  # For selecting custom icons
+import pandas as pd  # Import pandas for reading CSV headers
+from csv_loader import load_csv_coordinates  # Import function to load CSV data
+from vector_loader import load_vector_file  # Import function to load vector GIS files
+from map_widget import MapWidget  # Import the map widget to display the map
+from icon_selector import IconSelectorDialog  # Import the icon selector dialog
 
 # Dialog for selecting date and time (for Sentinel-2)
 class DateTimeSelectorDialog(QDialog):
@@ -107,6 +108,7 @@ class ColumnSelectorDialog(QDialog):
             icon_path = dialog.get_selected_icon()
             if icon_path:
                 self.selected_icon = icon_path
+                from PyQt5.QtGui import QPixmap
                 pixmap = QPixmap(icon_path)
                 self.icon_preview.setPixmap(pixmap.scaled(64, 64))
 
@@ -120,7 +122,7 @@ class ColumnSelectorDialog(QDialog):
             "Icon": self.selected_icon if self.selected_icon is not None else "Pin"
         }
 
-# Dialog for managing layer order (reordering CSV layers)
+# Dialog for managing layer order (reordering CSV/vector layers)
 class LayerManagerDialog(QDialog):
     def __init__(self, layers):
         super().__init__()
@@ -194,6 +196,11 @@ class LiveMapApp(QMainWindow):
         self.load_csv_button.clicked.connect(self.load_csv_data)
         self.layout.addWidget(self.load_csv_button)
 
+        # Button to load vector GIS files (shp, shx, GeoJSON, GPKG)
+        self.load_vector_button = QPushButton("Load GIS Data")
+        self.load_vector_button.clicked.connect(self.load_vector_data)
+        self.layout.addWidget(self.load_vector_button)
+
         # Button to manage (reorder) layers
         self.manage_layers_button = QPushButton("Manage Layers")
         self.manage_layers_button.clicked.connect(self.manage_layers)
@@ -235,16 +242,12 @@ class LiveMapApp(QMainWindow):
         file_path, _ = QFileDialog.getOpenFileName(self, "Open CSV File", "", "CSV Files (*.csv)")
         if not file_path:
             return
-
-        # Read CSV header to get column names using specified encoding
         try:
             df = pd.read_csv(file_path, nrows=1, encoding='latin-1')
             column_names = list(df.columns)
         except Exception as e:
             print(f"Error reading CSV headers: {e}")
             return
-
-        # Show dialog for column and custom icon selection with automatic defaults
         dialog = ColumnSelectorDialog(column_names)
         if dialog.exec_():
             selected_options = dialog.get_selected_options()
@@ -252,11 +255,27 @@ class LiveMapApp(QMainWindow):
             icon_type = selected_options["Icon"]
             self.map_widget.add_layer(coordinates, icon_type)
 
+    # Load vector GIS data and add it as a new layer
+    def load_vector_data(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open GIS File",
+            "",
+            "GIS Files (*.shp *.shx *.geojson *.gpkg)"
+        )
+        if not file_path:
+            return
+        from vector_loader import load_vector_file
+        geojson = load_vector_file(file_path)
+        if geojson is not None:
+            layer_name = os.path.basename(file_path)
+            self.map_widget.add_vector_layer(geojson, layer_name)
+
     # Open the layer management dialog for reordering layers
     def manage_layers(self):
-        if not self.map_widget.layers:
+        if not self.map_widget.all_layers():
             return
-        dialog = LayerManagerDialog(self.map_widget.layers.copy())
+        dialog = LayerManagerDialog(self.map_widget.all_layers().copy())
         if dialog.exec_():
             new_order = dialog.get_new_order()
             self.map_widget.update_layer_order(new_order)
