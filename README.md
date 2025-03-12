@@ -41,5 +41,6 @@ live_map_app/
 ├── icon_selector.py
 ├── vector_layer_selector.py
 ├── layer_preview.py
+├── spss_viewer.py
 ├── requirements.txt
 └── README.md

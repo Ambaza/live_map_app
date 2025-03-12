@@ -1,20 +1,20 @@
 # main.py
-import sys  # Import system module for command line arguments
+import sys  # For system operations
 import os  # For path operations
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton,
     QFileDialog, QToolBar, QAction, QDialog, QFormLayout, QComboBox,
     QDateTimeEdit, QDialogButtonBox, QListWidget, QHBoxLayout, QLabel, QMenu
 )
-import pandas as pd  # For reading CSV headers
-from csv_loader import load_csv_coordinates  # For loading CSV coordinates
+import pandas as pd  # For CSV handling
+from csv_loader import load_csv_coordinates  # For loading CSV data
 from vector_loader import load_vector_file  # For loading vector GIS files
 from map_widget import MapWidget  # For displaying the map
 from icon_selector import IconSelectorDialog  # For selecting custom icons
 from vector_layer_selector import VectorLayerSelectorDialog  # For selecting layers from a GeoPackage
 from layer_preview import LayerPreviewDialog  # For previewing layer data
+from spss_viewer import SPSSViewerDialog  # For SPSS file viewing
 
-# Dialog for selecting date and time (for Sentinel-2)
 class DateTimeSelectorDialog(QDialog):
     def __init__(self):
         super().__init__()
@@ -30,7 +30,6 @@ class DateTimeSelectorDialog(QDialog):
     def get_date_time(self):
         return self.date_time_edit.dateTime().toString("yyyy-MM-ddTHH:mm")
 
-# Dialog for selecting CSV columns and custom icon with automatic field detection
 class ColumnSelectorDialog(QDialog):
     def __init__(self, columns):
         super().__init__()
@@ -100,7 +99,6 @@ class ColumnSelectorDialog(QDialog):
             "Icon": self.selected_icon if self.selected_icon is not None else "Pin"
         }
 
-# Dialog for managing layer order with right-click preview
 class LayerManagerDialog(QDialog):
     def __init__(self, layers):
         super().__init__()
@@ -139,6 +137,7 @@ class LayerManagerDialog(QDialog):
             self.refresh_list()
             self.list_widget.setCurrentRow(current_row + 1)
     def contextMenuEvent(self, event):
+        from PyQt5.QtWidgets import QMenu
         item = self.list_widget.itemAt(event.pos())
         if item:
             menu = QMenu(self)
@@ -158,7 +157,6 @@ class LayerManagerDialog(QDialog):
     def get_new_order(self):
         return self.layers
 
-# Main application window
 class LiveMapApp(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -175,6 +173,9 @@ class LiveMapApp(QMainWindow):
         self.load_vector_button = QPushButton("Load GIS Data")
         self.load_vector_button.clicked.connect(self.load_vector_data)
         self.layout.addWidget(self.load_vector_button)
+        self.load_spss_button = QPushButton("Load SPSS File")
+        self.load_spss_button.clicked.connect(self.load_spss_data)
+        self.layout.addWidget(self.load_spss_button)
         self.manage_layers_button = QPushButton("Manage Layers")
         self.manage_layers_button.clicked.connect(self.manage_layers)
         self.layout.addWidget(self.manage_layers_button)
@@ -192,6 +193,9 @@ class LiveMapApp(QMainWindow):
         self.action_sentinel = QAction("Sentinel-2", self)
         self.action_sentinel.triggered.connect(self.select_sentinel_date_time)
         self.mapping_toolbar.addAction(self.action_sentinel)
+        self.action_cropland = QAction("Cropland", self)
+        self.action_cropland.triggered.connect(lambda: self.map_widget.set_map_mode("Cropland"))
+        self.mapping_toolbar.addAction(self.action_cropland)
     def select_sentinel_date_time(self):
         dialog = DateTimeSelectorDialog()
         if dialog.exec_():
@@ -238,6 +242,13 @@ class LiveMapApp(QMainWindow):
             if geojson is not None:
                 layer_name = os.path.basename(file_path)
                 self.map_widget.add_vector_layer(geojson, layer_name)
+    def load_spss_data(self):
+        file_path, _ = QFileDialog.getOpenFileName(self, "Open SPSS File", "", "SPSS Files (*.sav)")
+        if not file_path:
+            return
+        from spss_viewer import SPSSViewerDialog
+        dlg = SPSSViewerDialog(file_path)
+        dlg.exec_()
     def manage_layers(self):
         all_layers = self.map_widget.all_layers()
         if not all_layers:
