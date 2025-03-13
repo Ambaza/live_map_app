@@ -1,10 +1,9 @@
-
 # csv_loader.py
-import csv  # For CSV file operations
+import csv
+import math  # Import math to check for NaN
 
-# Load coordinates from the CSV file using user-selected options
 def load_csv_coordinates(file_path, selected_columns):
-    coordinates = []  # Initialize list to store coordinates
+    coordinates = []
     try:
         with open(file_path, newline='', encoding='latin-1') as csvfile:
             reader = csv.DictReader(csvfile)
@@ -13,11 +12,16 @@ def load_csv_coordinates(file_path, selected_columns):
             z_col = selected_columns["Z"]
             m_col = selected_columns["M"]
             for row in reader:
-                if not row[x_col].strip() or not row[y_col].strip():
+                x_val = row[x_col].strip()
+                y_val = row[y_col].strip()
+                if not x_val or not y_val:
                     continue
                 try:
-                    lon = float(row[x_col].strip())
-                    lat = float(row[y_col].strip())
+                    lon = float(x_val)
+                    lat = float(y_val)
+                    # Skip the row if conversion yields NaN
+                    if math.isnan(lat) or math.isnan(lon):
+                        continue
                 except Exception as e:
                     print(f"Error converting mandatory fields in row: {row}, skipping row")
                     continue
@@ -37,3 +41,17 @@ def load_csv_coordinates(file_path, selected_columns):
     except Exception as e:
         print(f"Error reading CSV file: {e}")
     return coordinates
+
+# New helper function to preview the first 10 lines
+def get_csv_preview(file_path, n=10):
+    preview_lines = []
+    try:
+        with open(file_path, newline='', encoding='latin-1') as csvfile:
+            reader = csv.reader(csvfile)
+            for i, row in enumerate(reader):
+                preview_lines.append(row)
+                if i >= n - 1:
+                    break
+    except Exception as e:
+        print(f"Error previewing CSV file: {e}")
+    return preview_lines

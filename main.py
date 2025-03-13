@@ -210,10 +210,19 @@ class LiveMapApp(QMainWindow):
         if dialog.exec_():
             date_time = dialog.get_date_time()
             self.map_widget.set_map_mode("GeemapCropland", date_time)
+
     def load_csv_data(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Open CSV File", "", "CSV Files (*.csv)")
         if not file_path:
             return
+        
+        # Preview the first 10 lines from the CSV file
+        from csv_loader import get_csv_preview
+        preview_lines = get_csv_preview(file_path, 10)
+        print("CSV Preview (first 10 lines):")
+        for line in preview_lines:
+            print(line)
+        
         try:
             df = pd.read_csv(file_path, nrows=1, encoding='latin-1')
             column_names = list(df.columns)
@@ -226,6 +235,7 @@ class LiveMapApp(QMainWindow):
             coordinates = load_csv_coordinates(file_path, selected_options)
             icon_type = selected_options["Icon"]
             self.map_widget.add_layer(coordinates, icon_type)
+
     def load_vector_data(self):
         file_path, _ = QFileDialog.getOpenFileName(
             self,

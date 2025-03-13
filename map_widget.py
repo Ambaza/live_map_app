@@ -205,32 +205,76 @@ class MapWidget(QWidget):
         return folium_map
 
     def generate_geemap_cropland_map(self, date_time):
-        # Use geemap for high quality interactive visualization
         import ee
         import geemap
+        import json
+        import math
+        import datetime
+
         try:
             ee.Initialize(project="npa-base-line-2023")
         except Exception as e:
-            logging.error(f"Earth Engine initialization error with geemap: {e}")
-            ee.Authenticate()  # This will prompt for authentication if needed
+            # First-run authentication (uncomment ee.Authenticate() when needed)
+            # ee.Authenticate()  
+            logging.error("EE initialization error: %s", e)
             ee.Initialize(project="npa-base-line-2023")
-        dataset = ee.Image("USGS/GFSAD1000_V1")
-        visParams = {'min': 0, 'max': 100, 'palette': ['ffffff', 'ffff00', 'ff0000']}
-        Map = geemap.Map(center=[0, 0], zoom=2)
-        Map.add_ee_layer(dataset, visParams, "Cropland Classification")
+
+        # Define a Region of Interest (ROI)
+        roi = ee.Geometry.Rectangle([-122.6, 37.0, -121.8, 38.0])
+
+        # Create a date range based on provided date_time or defaults.
+        if date_time:
+            try:
+                dt = datetime.datetime.strptime(date_time, "%Y-%m-%dT%H:%M")
+                start_date = (dt - datetime.timedelta(days=15)).strftime("%Y-%m-%d")
+                end_date = (dt + datetime.timedelta(days=15)).strftime("%Y-%m-%d")
+            except Exception as e:
+                logging.error("Error parsing date_time: %s", e)
+                start_date = '2021-06-01'
+                end_date = '2021-09-30'
+        else:
+            start_date = '2021-06-01'
+            end_date = '2021-09-30'
+
+        # Use updated asset for Sentinel-2 to avoid deprecation warnings.
+        collection = (ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+                    .filterBounds(roi)
+                    .filterDate(start_date, end_date)
+                    .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 10)))
+        composite = collection.median().clip(roi)
+
+        ndvi = composite.normalizedDifference(['B8', 'B4']).rename('NDVI')
+        cropland_class = ndvi.gt(0.4).rename('Cropland')
+
+        Map = geemap.Map(center=[37.5, -122.2], zoom=10)
+        Map.addLayer(composite, {"bands": ["B4", "B3", "B2"], "max": 3000}, "Sentinel-2 Composite")
+        Map.addLayer(cropland_class, {"min": 0, "max": 1, "palette": ["white", "green"]}, "Cropland Classification")
+
+        # Add CSV marker layers (if any exist)
         for layer in self.csv_layers:
             for coordinate in layer["coordinates"]:
                 lat, lon, alt, precision = coordinate
                 popup_text = f"Altitude: {alt} m"
                 if precision is not None:
                     popup_text += f", Precision: {precision} m"
-                if validate_coordinates(lat, lon):
-                    import folium
-                    folium.Marker(location=[convert_to_float(lat), convert_to_float(lon)], popup=popup_text).add_to(Map)
-                else:
-                    logging.error(f"Invalid coordinates in geemap layer: ({lat}, {lon})")
+                lat_conv = convert_to_float(lat)
+                lon_conv = convert_to_float(lon)
+                # Check for None or NaN values
+                if (lat_conv is None or lon_conv is None or
+                    math.isnan(lat_conv) or math.isnan(lon_conv)):
+                    logging.error(f"Invalid coordinates for geemap marker: ({lat}, {lon})")
+                    continue
+                Map.add_marker(location=[lat_conv, lon_conv], popup=popup_text)
+
+        # Add vector layers, converting GeoJSON strings to dictionaries if necessary.
         for layer in self.vector_layers:
-            folium.GeoJson(layer["geojson"], name=layer["name"]).add_to(Map)
+            try:
+                geojson_data = json.loads(layer["geojson"]) if isinstance(layer["geojson"], str) else layer["geojson"]
+                Map.add_geojson(geojson_data, layer_name=layer["name"])
+            except Exception as e:
+                logging.error(f"Error adding vector layer {layer['name']}: {e}")
+
+        Map.addLayerControl()
         return Map
 
     def update_map_view(self):
