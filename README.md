@@ -1,46 +1,89 @@
 # Live Map App
 
-## Overview
-This application is a PyQT desktop app that displays a live map with multiple mapping options and layered GIS data. Users can:
-- Load CSV files with coordinate data.
-- Load vector GIS files (e.g., SHP, SHX, GeoJSON, GPKG).
-- Select mapping options including:
-  - **OpenStreetMap**: Displays an OpenStreetMap view.
-  - **Google Map**: Displays a Google Satellite view using custom tiles.
-  - **Sentinel-2 Live Map**: Displays Sentinel-2 imagery using the Sentinel Hub API with OAuth2.
-- Manage layers by reordering them.
-- Capture the current map view as an image.
-- Automatically detect CSV columns and select custom icons.
+## Project Overview
+The **Live Map App** is a Python-based application designed to visualize geospatial data interactively. It allows users to load various geographic data formats (CSV, vector files) and display them on an interactive map with dynamic layers and icons.
 
-## New Features: GIS Data Import
-A new button, **"Load GIS Data"**, lets you import vector files such as:
-- Shapefiles (.shp, .shx)
-- GeoJSON files
-- GeoPackage files (.gpkg)
+## Installation & Setup
+### Prerequisites
+- Python 3.10+
+- Required dependencies (listed in `requirements.txt`)
 
-The app uses GeoPandas to read these files and adds them as vector layers on the map.
+### Installation Steps
+1. Clone the repository:
+   ```sh
+   git clone https://github.com/Ambaza/live_map_app.git
+   cd live_map_app
+   ```
+2. Create a virtual environment (optional but recommended):
+   ```sh
+   python -m venv venv
+   source venv/bin/activate  # On Windows use: venv\Scripts\activate
+   ```
+3. Install dependencies:
+   ```sh
+   pip install -r requirements.txt
+   ```
+4. Run the application:
+   ```sh
+   python main.py
+   ```
 
-## Configuration for Sentinel-2
-1. Register an OAuth client in your Sentinel Hub account.
-2. Replace `<your_client_id>`, `<your_client_secret>`, and `<your_instance_id>` in `map_widget.py` with your actual credentials.
-3. Ensure your OAuth client has permissions to access the Sentinel Hub WMS service.
-
-## Installation
-Install dependencies:
-```bash
-pip install -r requirements.txt
-
-
-File Structure
-
+## Project Structure
+```
 live_map_app/
-├── main.py
-├── map_widget.py
-├── csv_loader.py
-├── vector_loader.py
-├── icon_selector.py
-├── vector_layer_selector.py
-├── layer_preview.py
-├── spss_viewer.py
-├── requirements.txt
-└── README.md
+├── main.py                   # Entry point of the application
+├── map_widget.py             # Manages interactive map display using Leaflet.js (via Python bindings)
+├── csv_loader.py             # Handles loading and parsing of CSV files containing geospatial data
+├── vector_loader.py          # Loads and processes vector data (Shapefiles, GeoJSON, etc.)
+├── icon_selector.py          # Dynamically selects and applies icons to map markers
+├── vector_layer_selector.py  # Allows users to choose different vector layers to display
+├── layer_preview.py          # Provides a preview of selected map layers before rendering
+├── spss_viewer.py            # Handles display and analysis of SPSS (.sav) files
+├── requirements.txt          # Lists dependencies required for the project
+└── README.md                 # Project documentation
+```
+
+## How It Works
+1. **Loading Data**:
+   - Users can upload **CSV files** (longitude, latitude columns are automatically detected).
+   - Users can load **vector files** (Shapefiles, GeoJSON, etc.).
+2. **Map Interaction**:
+   - Data is rendered on an **interactive map**.
+   - Users can select layers and adjust visibility dynamically.
+3. **Icon Customization**:
+   - Icons are chosen based on data properties using `icon_selector.py`.
+4. **SPSS Data Integration**:
+   - Users can load SPSS files (`.sav`) to visualize statistical data geographically.
+
+## Current Development Status
+- [x] CSV loading and parsing
+- [x] Basic map rendering
+- [x] Vector file support
+- [ ] Advanced filtering options (in progress)
+- [ ] Real-time updates (planned)
+- [ ] Improved error handling (planned)
+
+## Common Errors & Debugging
+### `Invalid LatLng object: (X, NaN)`
+- This occurs when **latitude or longitude values are missing or not properly converted to numbers**.
+- **Solution:**
+  - Ensure the CSV or vector data is correctly formatted.
+  - Check for missing values before passing coordinates to the map.
+  - Implement better error handling when parsing numbers.
+
+## Future Features & Roadmap
+- **Real-time data updates** from external APIs
+- **User-defined styles** for map layers
+- **Offline map support**
+- **Mobile-friendly UI improvements**
+
+## Contributing
+Contributions are welcome! To contribute:
+1. Fork the repository.
+2. Create a feature branch (`git checkout -b feature-name`).
+3. Commit changes (`git commit -m "Description of changes"`).
+4. Push to your branch (`git push origin feature-name`).
+5. Open a Pull Request.
+
+## License
+[MIT License](LICENSE)

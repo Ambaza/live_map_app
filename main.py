@@ -18,7 +18,7 @@ from spss_viewer import SPSSViewerDialog  # For SPSS file viewing
 class DateTimeSelectorDialog(QDialog):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Select Date and Time for Sentinel-2")
+        self.setWindowTitle("Select Date and Time for Sentinel-2 / Custom Cropland")
         layout = QFormLayout(self)
         self.date_time_edit = QDateTimeEdit()
         self.date_time_edit.setCalendarPopup(True)
@@ -196,11 +196,20 @@ class LiveMapApp(QMainWindow):
         self.action_cropland = QAction("Cropland", self)
         self.action_cropland.triggered.connect(lambda: self.map_widget.set_map_mode("Cropland"))
         self.mapping_toolbar.addAction(self.action_cropland)
+        # New action: Geemap Cropland Visualization using higher quality rendering
+        self.action_geemap_cropland = QAction("Geemap Cropland", self)
+        self.action_geemap_cropland.triggered.connect(self.select_geemap_cropland_date)
+        self.mapping_toolbar.addAction(self.action_geemap_cropland)
     def select_sentinel_date_time(self):
         dialog = DateTimeSelectorDialog()
         if dialog.exec_():
             date_time = dialog.get_date_time()
             self.map_widget.set_map_mode("Sentinel", date_time)
+    def select_geemap_cropland_date(self):
+        dialog = DateTimeSelectorDialog()
+        if dialog.exec_():
+            date_time = dialog.get_date_time()
+            self.map_widget.set_map_mode("GeemapCropland", date_time)
     def load_csv_data(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Open CSV File", "", "CSV Files (*.csv)")
         if not file_path:

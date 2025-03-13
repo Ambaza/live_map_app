@@ -1,0 +1,1 @@
+2025-03-13 07:37:24,603 ERROR: Earth Engine initialization error with geemap: Project 'projects/your_project_id' not found or deleted.
